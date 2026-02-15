@@ -11,7 +11,7 @@
     <div v-else-if="gameState === 'playing'" class="screen">
       <div class="stats">
         <div class="score">Очки: {{ score }}</div>
-        <div class="timer" :class="{ 'timer-low': timeLeft < 2 }">
+        <div class="timer" :class="{ 'timer-low': timeLeft < 5 }">
           {{ timeLeft.toFixed(1) }}s
         </div>
       </div>
@@ -45,27 +45,29 @@ import { ref, reactive, onUnmounted } from 'vue'
 const gameState = ref('start') // start, playing, over
 const score = ref(0)
 const userInput = ref('')
-const timeLeft = ref(5)
+const timeLeft = ref(15)
 const problem = reactive({ a: 0, b: 0, op: '+', answer: 0 })
 
 let timerInterval = null
 
 const generateProblem = () => {
-  const a = Math.floor(Math.random() * 50) + 1
-  const b = Math.floor(Math.random() * 50) + 1
+  let a = Math.floor(Math.random() * 50) + 1
+  let b = Math.floor(Math.random() * 50) + 1
   const op = Math.random() > 0.5 ? '+' : '-'
+  
+  if (op === '-' && a < b) {
+    [a, b] = [b, a]
+  }
   
   problem.a = a
   problem.b = b
   problem.op = op
   problem.answer = op === '+' ? a + b : a - b
-  
-  // Reset timer based on score (gets faster)
-  timeLeft.value = Math.max(2, 5 - Math.floor(score.value / 10))
 }
 
 const startGame = () => {
   score.value = 0
+  timeLeft.value = 15
   userInput.value = ''
   gameState.value = 'playing'
   generateProblem()
@@ -77,6 +79,7 @@ const startTimer = () => {
   timerInterval = setInterval(() => {
     timeLeft.value -= 0.1
     if (timeLeft.value <= 0) {
+      timeLeft.value = 0
       endGame()
     }
   }, 100)
@@ -98,8 +101,10 @@ const clearInput = () => {
 }
 
 const submitAnswer = () => {
-  if (parseInt(userInput.value) === problem.answer) {
+  const ans = parseInt(userInput.value)
+  if (!isNaN(ans) && ans === problem.answer) {
     score.value++
+    timeLeft.value += 3
     userInput.value = ''
     generateProblem()
   } else {

@@ -88,6 +88,7 @@ const highScore = ref(parseInt(localStorage.getItem('mb-highscore') || '0'))
 const userInput = ref('')
 const timeLeft = ref(15.0)
 const maxTime = 15.0
+const bonusTime = ref(2.0)
 const problem = reactive({ a: 0, b: 0, op: '+', answer: 0 })
 
 let timerInterval = null
@@ -131,6 +132,7 @@ const generateProblem = () => {
 
 const startGame = () => {
   score.value = 0
+  bonusTime.value = 2.0
   inputShake.value = false
   timeLeft.value = maxTime // "Infinite Drive" start time
   userInput.value = ''
@@ -201,8 +203,11 @@ const checkAnswerManually = () => {
 
 const processCorrectAnswer = () => {
   score.value++
-  // +2 seconds for correct answer
-  timeLeft.value += 2 
+  // Add current bonus time
+  timeLeft.value += bonusTime.value 
+  
+  // Decrease bonus time by 0.1s for next answer, minimum 0.5s
+  bonusTime.value = Math.max(0.5, bonusTime.value - 0.1)
   
   userInput.value = ''
   generateProblem()

@@ -234,14 +234,14 @@ const currentStateClass = computed(() => {
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;600;700&display=swap');
 
 :root {
-  --bg-dark: #1a0b2e;
-  --bg-light: #2d1b4e;
-  --primary: #ff0055; /* Vibrant Red/Pink */
-  --secondary: #00f2ea; /* Cyber Cyan */
-  --accent: #ffde00; /* Energetic Yellow */
-  --text-main: #ffffff;
-  --glass: rgba(255, 255, 255, 0.1);
-  --glass-border: rgba(255, 255, 255, 0.2);
+  --bg-dark: #FFF9F2; /* Warm Cream */
+  --bg-light: #FFEBCC; /* Soft Peach */
+  --primary: #FF7043; /* Friendly Orange */
+  --secondary: #4DB6AC; /* Gentle Teal */
+  --accent: #FBC02D; /* Sunny Yellow */
+  --text-main: #4E342E; /* Dark Chocolate/Brown for readability */
+  --glass: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.8);
   --font-main: 'Fredoka', sans-serif;
 }
 
@@ -249,7 +249,7 @@ const currentStateClass = computed(() => {
 
 body {
   margin: 0;
-  background: radial-gradient(circle at center, var(--bg-light), var(--bg-dark));
+  background: linear-gradient(135deg, var(--bg-light), var(--bg-dark));
   color: var(--text-main);
   font-family: var(--font-main);
   overflow: hidden;
@@ -297,26 +297,25 @@ body {
 
 .logo-area {
   text-align: center;
-  transform: rotate(-3deg);
 }
 
 h1 {
   font-size: 4rem;
   line-height: 0.9;
   margin: 0;
-  color: var(--secondary);
-  text-shadow: 4px 4px 0px var(--primary);
+  color: var(--primary);
+  text-shadow: 3px 3px 0px var(--accent);
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
 }
 
 .subtitle {
   font-size: 1.5rem;
-  color: var(--accent);
-  letter-spacing: 4px;
+  color: var(--secondary);
+  letter-spacing: 2px;
   margin-top: 10px;
   font-weight: 600;
-  text-shadow: 2px 2px 0px #000;
+  text-shadow: none;
 }
 
 .hero-image {
@@ -325,8 +324,8 @@ h1 {
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-15px) rotate(5deg); }
 }
 
 /* --- Buttons --- */
@@ -335,13 +334,12 @@ button {
   font-family: var(--font-main);
   cursor: pointer;
   outline: none;
-  border-radius: 16px;
-  transition: transform 0.1s, filter 0.1s;
+  border-radius: 20px;
+  transition: transform 0.1s;
 }
 
 button:active {
-  transform: scale(0.95);
-  filter: brightness(0.9);
+  transform: scale(0.92);
 }
 
 .btn-main {
@@ -349,21 +347,9 @@ button:active {
   color: white;
   font-size: 2rem;
   font-weight: 700;
-  padding: 20px 60px;
-  border-bottom: 6px solid #990033;
-  box-shadow: 0 10px 20px rgba(255, 0, 85, 0.4);
-  position: relative;
-  overflow: hidden;
-}
-
-.pulse {
-  animation: pulse-animation 2s infinite;
-}
-
-@keyframes pulse-animation {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+  padding: 18px 50px;
+  border-bottom: 6px solid #D84315;
+  box-shadow: 0 8px 15px rgba(255, 112, 67, 0.3);
 }
 
 /* --- Playing Screen --- */
@@ -380,20 +366,21 @@ button:active {
 }
 
 .stat-box {
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  padding: 10px 20px;
+  background: white;
+  border: 2px solid var(--bg-light);
+  border-radius: 18px;
+  padding: 8px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 100px;
+  min-width: 110px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
 .stat-box .label {
-  font-size: 0.8rem;
-  opacity: 0.8;
-  letter-spacing: 1px;
+  font-size: 0.75rem;
+  color: #8D6E63;
+  font-weight: 600;
 }
 
 .stat-box .value {
@@ -403,14 +390,13 @@ button:active {
 
 .score-box .value { color: var(--accent); }
 .timer-box .value { color: var(--secondary); }
-.timer-critical .value { color: var(--primary); animation: shake 0.5s infinite; }
+.timer-critical .value { color: var(--primary); }
 
 .battle-arena {
   flex-grow: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
 }
 
 .problem-card {
@@ -419,90 +405,87 @@ button:active {
   display: flex;
   align-items: center;
   gap: 15px;
-  color: white;
-  text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  color: var(--text-main);
 }
 
-.operator { color: var(--secondary); }
-.equals { opacity: 0.5; }
+.operator { color: var(--primary); }
+.equals { color: #8D6E63; }
 
 .answer-slot {
   min-width: 120px;
-  height: 100px;
-  border-bottom: 6px solid var(--glass-border);
+  height: 90px;
+  border-bottom: 6px solid #FFCCBC;
   display: flex;
   justify-content: center;
   align-items: center;
-  color: var(--accent);
+  color: var(--secondary);
 }
 
 .answer-slot.filled {
-  border-color: var(--accent);
+  border-bottom: 6px solid var(--secondary);
 }
 
 /* Numpad */
 .numpad-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 14px;
   width: 100%;
   max-width: 360px;
 }
 
 .btn-num {
   background: white;
-  color: var(--bg-dark);
-  font-size: 2rem;
-  font-weight: 700;
-  padding: 20px 0;
-  border-radius: 12px;
-  box-shadow: 0 4px 0 #ccc;
+  color: var(--text-main);
+  font-size: 2.2rem;
+  font-weight: 600;
+  padding: 18px 0;
+  border-radius: 18px;
+  box-shadow: 0 5px 0 #EAD9C6;
 }
 
 .btn-action {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 700;
-  border-radius: 12px;
-  color: white;
+  border-radius: 18px;
 }
 
 .btn-del {
-  background: var(--primary);
-  box-shadow: 0 4px 0 #990033;
+  background: #BCAAA4;
+  color: white;
+  box-shadow: 0 5px 0 #8D6E63;
 }
 
 .btn-go {
   background: var(--secondary);
-  color: var(--bg-dark);
-  box-shadow: 0 4px 0 #009999;
+  color: white;
+  box-shadow: 0 5px 0 #00796B;
 }
 
 /* --- Result Screen --- */
 .result-screen {
   justify-content: center;
-  gap: 30px;
-  text-align: center;
+  gap: 25px;
 }
 
 .result-header h2 {
   font-size: 3rem;
   color: var(--primary);
-  margin-bottom: 0;
+  margin: 0;
 }
 
 .score-card {
-  background: var(--glass);
+  background: white;
   padding: 30px;
-  border-radius: 20px;
-  border: 1px solid var(--glass-border);
-  width: 100%;
+  border-radius: 25px;
+  border: 4px solid var(--bg-light);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
 }
 
 .final-score {
   font-size: 5rem;
   font-weight: 700;
   color: var(--accent);
-  line-height: 1;
 }
 
 .best-score {

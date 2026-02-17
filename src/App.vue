@@ -266,6 +266,10 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
 .game-container {
@@ -273,7 +277,8 @@ body {
   max-width: 480px;
   height: 100%;
   position: relative;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .screen {
@@ -285,8 +290,7 @@ body {
   padding: 20px;
   position: absolute;
   top: 0; 
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
 }
 
 /* --- Start Screen --- */

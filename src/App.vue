@@ -86,8 +86,8 @@ const gameState = ref('start')
 const score = ref(0)
 const highScore = ref(parseInt(localStorage.getItem('mb-highscore') || '0'))
 const userInput = ref('')
-const timeLeft = ref(60.0)
-const maxTime = 60.0
+const timeLeft = ref(15.0)
+const maxTime = 15.0
 const problem = reactive({ a: 0, b: 0, op: '+', answer: 0 })
 
 let timerInterval = null
@@ -179,19 +179,13 @@ const checkAnswerAuto = () => {
   const ans = parseInt(userInput.value)
   if (isNaN(ans)) return
 
-  // Check if the input length matches the answer length to avoid premature checking?
-  // Actually, for "Infinite Drive", speed is key. 
-  // If user types '1' and answer is '12', we wait. 
-  // But if answer is '6' and user types '6', we auto-submit.
-  
   const strAns = problem.answer.toString()
   const strUser = userInput.value
   
   if (strAns === strUser) {
-    // Correct!
     processCorrectAnswer()
-  } else if (strUser.length >= strAns.length) {
-    // Wrong logic: if length is same or more and it's wrong -> clear/punish
+  } else if (!strAns.startsWith(strUser)) {
+    // If what user typed is not a prefix of the correct answer, it's immediately wrong
     processWrongAnswer()
   }
 }
@@ -207,18 +201,16 @@ const checkAnswerManually = () => {
 
 const processCorrectAnswer = () => {
   score.value++
-  // Bonus time logic: +2 seconds for correct answer, cap at maxTime?
-  // Infinite drive usually adds time.
-  timeLeft.value = Math.min(timeLeft.value + 2, maxTime + 10) 
+  // +2 seconds for correct answer
+  timeLeft.value += 2 
   
   userInput.value = ''
   generateProblem()
 }
 
 const processWrongAnswer = () => {
-  // Visual feedback only? Or time penalty?
-  // Let's do a time penalty for "Infinite Drive" pressure
-  timeLeft.value = Math.max(0, timeLeft.value - 3)
+  // -0.5 seconds penalty
+  timeLeft.value = Math.max(0, timeLeft.value - 0.5)
   
   // Shake effect
   inputShake.value = true

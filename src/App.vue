@@ -273,6 +273,7 @@ body {
   max-width: 480px;
   height: 100%;
   position: relative;
+  margin: 0 auto;
 }
 
 .screen {
@@ -283,7 +284,9 @@ body {
   align-items: center;
   padding: 20px;
   position: absolute;
-  top: 0; left: 0;
+  top: 0; 
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* --- Start Screen --- */

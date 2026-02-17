@@ -1,73 +1,138 @@
 <template>
-  <div class="game-container" :class="{ 'game-over': gameState === 'over' }">
-    <!-- Start Screen -->
-    <div v-if="gameState === 'start'" class="screen">
-      <h1>Mental Battle</h1>
-      <p>Бесконечный драйв</p>
-      <button @click="startGame" class="btn-main">СТАРТ</button>
-    </div>
+  <div class="game-wrapper" :class="currentStateClass">
+    <div class="game-container">
+      
+      <!-- Start Screen -->
+      <transition name="fade" mode="out-in">
+        <div v-if="gameState === 'start'" class="screen start-screen" key="start">
+          <div class="logo-area">
+            <h1>MENTAL<br>BATTLE</h1>
+            <div class="subtitle">INFINITE DRIVE</div>
+          </div>
+          
+          <div class="hero-image">🚀</div>
 
-    <!-- Playing Screen -->
-    <div v-else-if="gameState === 'playing'" class="screen">
-      <div class="stats">
-        <div class="score">Очки: {{ score }}</div>
-        <div class="timer" :class="{ 'timer-low': timeLeft < 5 }">
-          {{ timeLeft.toFixed(1) }}s
+          <button @click="startGame" class="btn-main pulse">
+            СТАРТ
+            <span class="btn-shine"></span>
+          </button>
         </div>
-      </div>
 
-      <div class="problem">
-        {{ problem.a }} {{ problem.op }} {{ problem.b }} = ?
-      </div>
+        <!-- Playing Screen -->
+        <div v-else-if="gameState === 'playing'" class="screen play-screen" key="playing">
+          <div class="header-bar">
+            <div class="stat-box score-box">
+              <span class="label">СЧЁТ</span>
+              <span class="value">{{ score }}</span>
+            </div>
+            <div class="stat-box timer-box" :class="{ 'timer-critical': timeLeft <= 5 }">
+              <span class="label">ВРЕМЯ</span>
+              <span class="value">{{ timeLeft.toFixed(1) }}</span>
+            </div>
+          </div>
 
-      <div class="input-display">{{ userInput || '?' }}</div>
+          <div class="battle-arena">
+             <div class="problem-card">
+               <span class="operand">{{ problem.a }}</span>
+               <span class="operator">{{ problem.op }}</span>
+               <span class="operand">{{ problem.b }}</span>
+               <span class="equals">=</span>
+               <span class="answer-slot" :class="{ 'filled': userInput.length > 0 }">
+                 {{ userInput || '?' }}
+               </span>
+             </div>
+          </div>
 
-      <div class="numpad">
-        <button v-for="n in 9" :key="n" @click="appendDigit(n)">{{ n }}</button>
-        <button @click="clearInput">C</button>
-        <button @click="appendDigit(0)">0</button>
-        <button @click="submitAnswer" class="btn-submit">➔</button>
-      </div>
-    </div>
+          <div class="numpad-grid">
+            <button v-for="n in [1, 2, 3, 4, 5, 6, 7, 8, 9]" :key="n" 
+                    @click="appendDigit(n)" class="btn-num">
+              {{ n }}
+            </button>
+            <button @click="backspace" class="btn-action btn-del">⌫</button>
+            <button @click="appendDigit(0)" class="btn-num">0</button>
+            <!-- Auto-submit is handled, but keep an enter button just in case or for visual symmetry -->
+             <button @click="checkAnswerManually" class="btn-action btn-go">GO</button>
+          </div>
+        </div>
 
-    <!-- Game Over Screen -->
-    <div v-else-if="gameState === 'over'" class="screen">
-      <h2>КОНЕЦ ИГРЫ</h2>
-      <div class="final-score">Ваш счет: {{ score }}</div>
-      <button @click="startGame" class="btn-main">ЕЩЕ РАЗ</button>
+        <!-- Game Over Screen -->
+        <div v-else-if="gameState === 'over'" class="screen result-screen" key="over">
+          <div class="result-header">
+            <h2>GAME OVER</h2>
+            <p v-if="score > highScore" class="new-record">🏆 НОВЫЙ РЕКОРД! 🏆</p>
+            <p v-else class="good-job">ОТЛИЧНАЯ ПОПЫТКА!</p>
+          </div>
+
+          <div class="score-card">
+            <div class="final-score">{{ score }}</div>
+            <div class="best-score">ЛУЧШИЙ: {{ highScore }}</div>
+          </div>
+
+          <button @click="startGame" class="btn-main">
+            ЕЩЕ РАЗ
+          </button>
+        </div>
+      </transition>
+
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 
-const gameState = ref('start') // start, playing, over
+// --- Game Logic ---
+const gameState = ref('start')
 const score = ref(0)
+const highScore = ref(parseInt(localStorage.getItem('mb-highscore') || '0'))
 const userInput = ref('')
-const timeLeft = ref(15)
+const timeLeft = ref(60.0)
+const maxTime = 60.0
 const problem = reactive({ a: 0, b: 0, op: '+', answer: 0 })
 
 let timerInterval = null
 
+// --- Difficulty Scaling ---
+// As score increases, problems get harder
+const getRange = (currentScore) => {
+  if (currentScore < 10) return 10 // 0-9: numbers up to 10
+  if (currentScore < 25) return 20 // 10-24: numbers up to 20
+  if (currentScore < 50) return 50 // 25-49: numbers up to 50
+  return 100 // 50+: numbers up to 100
+}
+
 const generateProblem = () => {
-  let a = Math.floor(Math.random() * 50) + 1
-  let b = Math.floor(Math.random() * 50) + 1
-  const op = Math.random() > 0.5 ? '+' : '-'
+  const range = getRange(score.value)
+  let a = Math.floor(Math.random() * range) + 1
+  let b = Math.floor(Math.random() * range) + 1
   
-  if (op === '-' && a < b) {
-    [a, b] = [b, a]
+  // Mix of + and -
+  // After 20 points, maybe introduce simple multiplication? Let's stick to +/- for MVP consistency with "Mental Battle" basics
+  const ops = score.value > 30 ? ['+', '-', '+', '-', '*'] : ['+', '-'] // 20% chance of * after 30
+  const op = ops[Math.floor(Math.random() * ops.length)]
+
+  if (op === '*') {
+     // Simple multiplication table (2-9)
+     a = Math.floor(Math.random() * 8) + 2
+     b = Math.floor(Math.random() * 9) + 1
+  } else if (op === '-') {
+    // Ensure positive result for simplicity (kids mode)
+    if (a < b) [a, b] = [b, a]
   }
-  
+
   problem.a = a
   problem.b = b
   problem.op = op
-  problem.answer = op === '+' ? a + b : a - b
+  
+  if (op === '+') problem.answer = a + b
+  if (op === '-') problem.answer = a - b
+  if (op === '*') problem.answer = a * b
 }
 
 const startGame = () => {
   score.value = 0
-  timeLeft.value = 15
+  inputShake.value = false
+  timeLeft.value = maxTime // "Infinite Drive" start time
   userInput.value = ''
   gameState.value = 'playing'
   generateProblem()
@@ -75,143 +140,389 @@ const startGame = () => {
 }
 
 const startTimer = () => {
-  clearInterval(timerInterval)
+  if (timerInterval) clearInterval(timerInterval)
+  const tickRate = 100
+  
   timerInterval = setInterval(() => {
-    timeLeft.value -= 0.1
+    timeLeft.value -= (tickRate / 1000)
     if (timeLeft.value <= 0) {
       timeLeft.value = 0
-      endGame()
+      gameOver()
     }
-  }, 100)
+  }, tickRate)
 }
 
-const endGame = () => {
+const gameOver = () => {
   clearInterval(timerInterval)
   gameState.value = 'over'
+  if (score.value > highScore.value) {
+    highScore.value = score.value
+    localStorage.setItem('mb-highscore', score.value)
+  }
 }
+
+// --- Input Handling ---
+const inputShake = ref(false)
 
 const appendDigit = (n) => {
   if (userInput.value.length < 4) {
     userInput.value += n
+    checkAnswerAuto()
   }
 }
 
-const clearInput = () => {
+const backspace = () => {
+  userInput.value = userInput.value.slice(0, -1)
+}
+
+const checkAnswerAuto = () => {
+  const ans = parseInt(userInput.value)
+  if (isNaN(ans)) return
+
+  // Check if the input length matches the answer length to avoid premature checking?
+  // Actually, for "Infinite Drive", speed is key. 
+  // If user types '1' and answer is '12', we wait. 
+  // But if answer is '6' and user types '6', we auto-submit.
+  
+  const strAns = problem.answer.toString()
+  const strUser = userInput.value
+  
+  if (strAns === strUser) {
+    // Correct!
+    processCorrectAnswer()
+  } else if (strUser.length >= strAns.length) {
+    // Wrong logic: if length is same or more and it's wrong -> clear/punish
+    processWrongAnswer()
+  }
+}
+
+const checkAnswerManually = () => {
+  const ans = parseInt(userInput.value)
+  if (ans === problem.answer) {
+    processCorrectAnswer()
+  } else {
+    processWrongAnswer()
+  }
+}
+
+const processCorrectAnswer = () => {
+  score.value++
+  // Bonus time logic: +2 seconds for correct answer, cap at maxTime?
+  // Infinite drive usually adds time.
+  timeLeft.value = Math.min(timeLeft.value + 2, maxTime + 10) 
+  
+  userInput.value = ''
+  generateProblem()
+}
+
+const processWrongAnswer = () => {
+  // Visual feedback only? Or time penalty?
+  // Let's do a time penalty for "Infinite Drive" pressure
+  timeLeft.value = Math.max(0, timeLeft.value - 3)
+  
+  // Shake effect
+  inputShake.value = true
+  setTimeout(() => inputShake.value = false, 400)
+  
   userInput.value = ''
 }
 
-const submitAnswer = () => {
-  const ans = parseInt(userInput.value)
-  if (!isNaN(ans) && ans === problem.answer) {
-    score.value++
-    timeLeft.value += 3
-    userInput.value = ''
-    generateProblem()
-  } else {
-    endGame()
-  }
-}
+const currentStateClass = computed(() => {
+  return `state-${gameState.value}`
+})
 
-onUnmounted(() => clearInterval(timerInterval))
 </script>
 
 <style>
+/* --- Design System --- */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;600;700&display=swap');
+
 :root {
-  --bg: #121212;
-  --text: #e0e0e0;
-  --accent: #4caf50;
-  --danger: #f44336;
+  --bg-dark: #1a0b2e;
+  --bg-light: #2d1b4e;
+  --primary: #ff0055; /* Vibrant Red/Pink */
+  --secondary: #00f2ea; /* Cyber Cyan */
+  --accent: #ffde00; /* Energetic Yellow */
+  --text-main: #ffffff;
+  --glass: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --font-main: 'Fredoka', sans-serif;
 }
+
+* { box-sizing: border-box; touch-action: manipulation; }
 
 body {
   margin: 0;
-  padding: 0;
-  background-color: var(--bg);
-  color: var(--text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at center, var(--bg-light), var(--bg-dark));
+  color: var(--text-main);
+  font-family: var(--font-main);
   overflow: hidden;
-  user-select: none;
+  height: 100vh;
+}
+
+.game-wrapper {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .game-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.3s;
-}
-
-.game-over {
-  background-color: #2c0000;
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  position: relative;
 }
 
 .screen {
   width: 100%;
-  max-width: 400px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 20px;
+  position: absolute;
+  top: 0; left: 0;
+}
+
+/* --- Start Screen --- */
+.start-screen {
+  justify-content: center;
+  gap: 30px;
+}
+
+.logo-area {
   text-align: center;
-  padding: 20px;
+  transform: rotate(-3deg);
 }
 
-h1 { font-size: 3rem; margin-bottom: 0.5rem; letter-spacing: -1px; }
-
-.stats {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 2rem;
+h1 {
+  font-size: 4rem;
+  line-height: 0.9;
+  margin: 0;
+  color: var(--secondary);
+  text-shadow: 4px 4px 0px var(--primary);
+  font-weight: 700;
+  letter-spacing: 2px;
 }
 
-.timer-low { color: var(--danger); }
-
-.problem {
-  font-size: 3.5rem;
-  font-weight: 800;
-  margin-bottom: 1rem;
-}
-
-.input-display {
-  font-size: 2.5rem;
-  height: 3rem;
-  border-bottom: 2px solid var(--accent);
-  width: 150px;
-  margin-bottom: 2rem;
-}
-
-.numpad {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  width: 100%;
-}
-
-button {
-  background: #1e1e1e;
-  border: 1px solid #333;
-  color: white;
-  padding: 20px;
+.subtitle {
   font-size: 1.5rem;
-  border-radius: 12px;
-  cursor: pointer;
-  touch-action: manipulation;
+  color: var(--accent);
+  letter-spacing: 4px;
+  margin-top: 10px;
+  font-weight: 600;
+  text-shadow: 2px 2px 0px #000;
 }
 
-button:active { background: #333; }
+.hero-image {
+  font-size: 6rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+/* --- Buttons --- */
+button {
+  border: none;
+  font-family: var(--font-main);
+  cursor: pointer;
+  outline: none;
+  border-radius: 16px;
+  transition: transform 0.1s, filter 0.1s;
+}
+
+button:active {
+  transform: scale(0.95);
+  filter: brightness(0.9);
+}
 
 .btn-main {
-  background: var(--accent);
-  color: black;
-  font-weight: bold;
-  width: 200px;
-  padding: 15px;
-  margin-top: 2rem;
+  background: var(--primary);
+  color: white;
+  font-size: 2rem;
+  font-weight: 700;
+  padding: 20px 60px;
+  border-bottom: 6px solid #990033;
+  box-shadow: 0 10px 20px rgba(255, 0, 85, 0.4);
+  position: relative;
+  overflow: hidden;
 }
 
-.btn-submit { background: var(--accent); color: black; }
-.final-score { font-size: 2rem; margin: 1rem 0; }
+.pulse {
+  animation: pulse-animation 2s infinite;
+}
+
+@keyframes pulse-animation {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* --- Playing Screen --- */
+.play-screen {
+  justify-content: space-between;
+  padding-bottom: 40px;
+}
+
+.header-bar {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.stat-box {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 10px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 100px;
+}
+
+.stat-box .label {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  letter-spacing: 1px;
+}
+
+.stat-box .value {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.score-box .value { color: var(--accent); }
+.timer-box .value { color: var(--secondary); }
+.timer-critical .value { color: var(--primary); animation: shake 0.5s infinite; }
+
+.battle-arena {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.problem-card {
+  font-size: 4.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: white;
+  text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.operator { color: var(--secondary); }
+.equals { opacity: 0.5; }
+
+.answer-slot {
+  min-width: 120px;
+  height: 100px;
+  border-bottom: 6px solid var(--glass-border);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--accent);
+}
+
+.answer-slot.filled {
+  border-color: var(--accent);
+}
+
+/* Numpad */
+.numpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.btn-num {
+  background: white;
+  color: var(--bg-dark);
+  font-size: 2rem;
+  font-weight: 700;
+  padding: 20px 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 0 #ccc;
+}
+
+.btn-action {
+  font-size: 1.5rem;
+  font-weight: 700;
+  border-radius: 12px;
+  color: white;
+}
+
+.btn-del {
+  background: var(--primary);
+  box-shadow: 0 4px 0 #990033;
+}
+
+.btn-go {
+  background: var(--secondary);
+  color: var(--bg-dark);
+  box-shadow: 0 4px 0 #009999;
+}
+
+/* --- Result Screen --- */
+.result-screen {
+  justify-content: center;
+  gap: 30px;
+  text-align: center;
+}
+
+.result-header h2 {
+  font-size: 3rem;
+  color: var(--primary);
+  margin-bottom: 0;
+}
+
+.score-card {
+  background: var(--glass);
+  padding: 30px;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  width: 100%;
+}
+
+.final-score {
+  font-size: 5rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.best-score {
+  margin-top: 10px;
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+
+/* --- Transitions --- */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* Mobile Responsiveness */
+@media (max-height: 700px) {
+  h1 { font-size: 3rem; }
+  .problem-card { font-size: 3.5rem; }
+  .btn-main { padding: 15px 40px; font-size: 1.5rem; }
+  .btn-num { padding: 15px 0; font-size: 1.8rem; }
+}
 </style>
